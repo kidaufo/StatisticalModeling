@@ -1,0 +1,118 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+真の確率分布
+```{r}
+x <- seq(0, 15, 1)
+plot(dpois(x, exp(2.08)), col="magenta", type="b", ylim=c(0,0.2), xlab="count", ylab="probability")
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```{r}
+logL <- function(data, lambda) sum(dpois(data, lambda, log=TRUE))
+
+res <- c()
+for (j in 1:1000){
+  # 真の分布から得られた50個のサンプル(推定用データ)
+  poisson_sample <- rpois(50, 8)
+  
+  # パラメーターbetaを推定
+  estimated_lambda <- sum(poisson_sample) / length(poisson_sample)
+  
+  # 最大対数尤度
+  max_L <- logL(poisson_sample, estimated_lambda)
+  
+  logL_vec <- c()
+  for (i in 1:200){
+    # 検証用データを生成
+    validation_data <- rpois(50, 8)
+    # 対数尤度を計算
+    logL_vec <- c(logL_vec, logL(validation_data, estimated_lambda))
+  }
+  
+  # 最大対数尤度と平均対数尤度の差がバイアス
+  res <- c(res, max_L - mean(logL_vec))
+}
+
+# バイアスの標本平均
+mean(res)
+
+```
+```{r}
+bias <- function(lambda.true, sample.size){
+  #１サンプルセット（sample.size個）のデータを生成し、ポアソン分布の強度推定
+  sample.rpois <- rpois(sample.size, lambda.true)
+  fit <- glm(sample.rpois~1, family=poisson) 
+  #glm推定結果からモデルパラメーター（ポアソン分布の強度（推定））を計算
+  #(モデル：log(lambda) = beta)
+  lambda.estimated <- exp(coef(fit))
+  #また別に本物のパラメーター(lambda.true)から
+  #サンプルセット（sample.size個）を200セットサンプリング
+  #平均対数尤度をポアソン分布の強度（推定）から計算
+  likelihood.mean <- mean(sapply(1:200, function(i){sum(log(dpois(rpois(N, lambda.true), lambda.estimated)))}))
+  #bias(最大尤度-平均尤度）を返却
+  logLik(fit) - likelihood.mean
+}
+
+# 各種パラメーター設定 １サンプルセットに含まれるサンプル数
+N <- 50
+# 真のポアソン分布の強度
+lambda.true <- 8
+# 1000回biasの推定を繰り返す
+bias.sampled <- sapply(1:1000, function(i) bias(lambda.true, N))
+mean(bias.sampled)
+hist(bias.sampled)
+
+```
+
+```{r}
+library(ggplot2)
+qplot(bias.sampled, geom = "blank") + geom_histogram(aes(y = ..density..), 
+    colour = "black", fill = "white") + geom_density(alpha = 0.2, fill = "#6666FF") + 
+    geom_vline(aes(xintercept = mean(bias.sampled)), color = "red", linetype = "dashed", 
+        size = 1)
+
+```
+
+```{r}
+logL <- function(data, lambda) sum(dpois(data, lambda, log=TRUE))
+
+res <- c()
+for (j in 1:1000){
+  # 真の分布から得られた50個のサンプル(推定用データ)
+  poisson_sample <- rpois(50, 8)
+  
+  # パラメーターbetaを推定
+  estimated_lambda <- sum(poisson_sample) / length(poisson_sample)
+  
+  # 最大対数尤度
+  max_L <- logL(poisson_sample, estimated_lambda)
+  
+  logL_vec <- c()
+  for (i in 1:200){
+    # 検証用データを生成
+    validation_data <- rpois(50, 8)
+    # 対数尤度を計算
+    logL_vec <- c(logL_vec, logL(validation_data, estimated_lambda))
+  }
+  
+  # 最大対数尤度と平均対数尤度の差がバイアス
+  res <- c(res, max_L - mean(logL_vec))
+}
+
+# バイアスの標本平均
+mean(res)
+```
+
+
+
