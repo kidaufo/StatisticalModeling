@@ -1,2 +1,2 @@
 # StatisticalModeling
-緑本の勉強
+This repository incluldes Python/R sciripts for statistical modeling. This is mostly for personal record.
